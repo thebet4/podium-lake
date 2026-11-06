@@ -11,3 +11,14 @@ wheels/
 
 # Environment variables
 .env
+
+# Data and artifacts from, Spark
+data/
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate*
+terraform/terraform.tfvars
