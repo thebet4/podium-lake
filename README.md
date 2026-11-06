@@ -58,10 +58,26 @@ uv run podium-lake ingest results --from 2024 --force
 The command exits with code `1` if any round failed, so it can simply be re-run
 until it completes — already-downloaded pages are never requested again.
 
+Build the silver Parquet tables (`data/silver/`) and explore them with
+[DuckDB](https://duckdb.org/docs/installation/) (`brew install duckdb`):
+
+```bash
+uv run podium-lake transform
+
+duckdb -init sql/silver_views.sql   # one view per table: results, laps, drivers, ...
+```
+
+```sql
+select d.family_name, sum(r.points) as pts
+from results r join drivers d using (driver_id)
+where season = 2026
+group by all order by pts desc;
+```
+
 Tests:
 
 ```bash
-uv run --with pytest pytest
+uv run pytest
 ```
 
 ## Running on AWS
