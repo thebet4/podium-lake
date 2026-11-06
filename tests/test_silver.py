@@ -2,11 +2,12 @@ import json
 import shutil
 
 import pytest
-from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
 from make_sample import CONSTRUCTORS, DRIVERS, LAPS, ROUNDS, SEASONS, STOPS, make_sample
-from podium_lake.transform.silver import TABLES, build_silver, to_millis
+from podium_lake.silver import TABLES, build_silver
+from podium_lake.silver.columns import to_millis
+from podium_lake.silver.spark import local_session
 
 KEYS = {
     "results": ["season", "round", "driver_id"],
@@ -21,12 +22,7 @@ KEYS = {
 
 @pytest.fixture(scope="module")
 def spark():
-    session = (
-        SparkSession.builder.master("local[1]")
-        .config("spark.ui.enabled", "false")
-        .config("spark.sql.shuffle.partitions", "1")
-        .getOrCreate()
-    )
+    session = local_session("podium-lake-tests", cores="1")
     yield session
     session.stop()
 
@@ -121,9 +117,9 @@ def test_facts_reference_dimensions(spark, built, fact, dim, keys):
 
 def test_only_facts_are_partitioned(built):
     silver = built[1]
-    for name, (_, _, is_fact) in TABLES.items():
+    for name, table in TABLES.items():
         partitions = sorted(p.name for p in (silver / name).glob("season=*"))
-        if is_fact:
+        if table.partition_by:
             assert partitions == [f"season={season}" for season in SEASONS]
             # repartition before partitionBy: one file per season
             assert all(len(list((silver / name / p).glob("*.parquet"))) == 1 for p in partitions)

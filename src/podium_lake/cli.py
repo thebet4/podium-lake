@@ -86,12 +86,11 @@ def run_ingest(endpoint, init_season, end_season, force) -> Summary:
 
 
 def run_transform() -> dict[str, int]:
-    # Imported here so `ingest` does not pay for starting the JVM
-    from pyspark.sql import SparkSession
+    # Imported here so `ingest` does not pay for importing pyspark
+    from podium_lake.silver import build_silver
+    from podium_lake.silver.spark import local_session
 
-    from podium_lake.transform import build_silver
-
-    spark = SparkSession.builder.appName("podium-lake").master("local[*]").getOrCreate()
+    spark = local_session()
     try:
         return build_silver(spark, str(BRONZE_DIR / "jolpica"), str(SILVER_DIR))
     finally:
