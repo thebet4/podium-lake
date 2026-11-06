@@ -1,4 +1,8 @@
-"""Command line entry point: `podium-lake ingest <endpoint> --from 2024 --to 2026`."""
+"""Command line entry point.
+
+`podium-lake ingest <endpoint> --from 2024 --to 2026` fills the bronze layer;
+`podium-lake transform` builds the silver layer from it.
+"""
 
 import argparse
 import logging
@@ -7,6 +11,7 @@ from collections.abc import Sequence
 
 from podium_lake.ingest import ENDPOINTS, Summary, ingest_by_season
 from podium_lake.logging_config import setup_logging
+from podium_lake.paths import BRONZE_DIR, SILVER_DIR
 
 DEFAULT_SEASON = 2026
 ALL = "all"
@@ -59,6 +64,16 @@ def build_parser() -> argparse.ArgumentParser:
         "-v", "--verbose", action="store_true",
         help="log every request and file written",
     )
+
+    transform = commands.add_parser(
+        "transform",
+        help="build the silver Parquet tables from the bronze layer",
+        description=f"Build the silver Parquet tables from {BRONZE_DIR} into {SILVER_DIR}.",
+    )
+    transform.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="log the bronze schemas read",
+    )
     return parser
 
 
@@ -70,15 +85,34 @@ def run_ingest(endpoint, init_season, end_season, force) -> Summary:
     return total
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+def run_transform() -> dict[str, int]:
+    # Imported here so `ingest` does not pay for starting the JVM
+    from pyspark.sql import SparkSession
 
-    if args.end_season is None:
-        args.end_season = args.init_season
-    if args.end_season < args.init_season:
-        build_parser().error(f"--to ({args.end_season}) is before --from ({args.init_season})")
+    from podium_lake.transform import build_silver
+
+    spark = SparkSession.builder.appName("podium-lake").master("local[*]").getOrCreate()
+    try:
+        return build_silver(spark, str(BRONZE_DIR / "jolpica"), str(SILVER_DIR))
+    finally:
+        spark.stop()
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.command == "ingest":
+        if args.end_season is None:
+            args.end_season = args.init_season
+        if args.end_season < args.init_season:
+            parser.error(f"--to ({args.end_season}) is before --from ({args.init_season})")
 
     setup_logging(logging.DEBUG if args.verbose else logging.INFO)
+
+    if args.command == "transform":
+        run_transform()
+        return 0
 
     if args.command == "ingest":
         summary = run_ingest(args.endpoint, args.init_season, args.end_season, args.force)
