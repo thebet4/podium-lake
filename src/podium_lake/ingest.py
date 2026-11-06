@@ -31,6 +31,7 @@ class Endpoint:
 
 ENDPOINTS = {
     "drivers": Endpoint("drivers"),
+    "constructors": Endpoint("constructors"),
     "races": Endpoint("races"),
     "results": Endpoint("results"),
     "laps": Endpoint("laps", per_round=True, min_season=1996),
@@ -213,6 +214,10 @@ def get_drivers_by_season(init_season=2026, end_season=2026, force=False):
     return ingest_by_season("drivers", init_season, end_season, force)
 
 
+def get_constructors_by_season(init_season=2026, end_season=2026, force=False):
+    return ingest_by_season("constructors", init_season, end_season, force)
+
+
 def get_races_by_season(init_season=2026, end_season=2026, force=False):
     return ingest_by_season("races", init_season, end_season, force)
 
@@ -232,6 +237,7 @@ def get_pitstops_by_season(init_season=2026, end_season=2026, force=False):
 if __name__ == "__main__":
     setup_logging()
     get_drivers_by_season(2026, 2026)
+    get_constructors_by_season(2026, 2026)
     get_races_by_season(2026, 2026)
     get_results_by_season(2026, 2026)
     get_laps_by_season(2026, 2026)
