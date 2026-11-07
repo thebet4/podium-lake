@@ -1,7 +1,7 @@
 [project]
 name = "podium-lake"
 version = "0.1.0"
-description = "Add your description here"
+description = "Formula 1 data lake: Jolpica API to bronze JSON and a silver Parquet star schema"
 readme = "README.md"
 authors = [
     { name = "Vinicius Barros", email = "barros.vinicius0103@gmail.com" }
